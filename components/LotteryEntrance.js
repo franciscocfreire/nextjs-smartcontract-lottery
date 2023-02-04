@@ -2,6 +2,7 @@ import { useMoralis, useWeb3Contract } from "react-moralis"
 import { abi, contractAddresses } from "../constants"
 import { useEffect, useState } from "react"
 import { ethers } from "ethers"
+import { useNotification } from "web3uikit"
 
 // have a function to enter the lottery
 
@@ -9,6 +10,7 @@ export default function LotteryEntrance() {
     const [entranceFee, setEntranceFee] = useState("0")
 
     const { chainId: chainIdHex, isWeb3Enabled } = useMoralis()
+    const dispatch = useNotification()
     const chainId = parseInt(chainIdHex)
     const raffleAddress = chainId in contractAddresses ? contractAddresses[chainId][0] : null
     const { runContractFunction: getEntranceFee } = useWeb3Contract({
@@ -38,6 +40,20 @@ export default function LotteryEntrance() {
         }
     }, [isWeb3Enabled])
 
+    const handleSuccess = async function(tx){
+        await tx.wait(1)
+        handleNewNotification(tx)
+    }
+
+    const handleNewNotification = function (){
+        dispatch({
+            type: "info",
+            message: "Transaction complete",
+            title: "Tx Notification",
+            position: "topR",
+            icon: "bell",
+        })
+    }
     return (
         <div>
             Hi from lottery entrance
@@ -45,7 +61,10 @@ export default function LotteryEntrance() {
                 <div>
                     <button
                         onClick={async function () {
-                            await enterRaffle()
+                            await enterRaffle({
+                                onSuccess: handleSuccess,
+                                onError: (error) => console.log(error),
+                            })
                         }}
                     >Enter Raffle</button>
                     {ethers.utils.formatUnits(entranceFee, "ether")}
